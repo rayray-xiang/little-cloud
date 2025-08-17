@@ -20,26 +20,42 @@ public class FileStorageService {
     private final Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads");
 
     public FileStorageService() throws IOException {
-        // create uploads folder if it doesn't exist
+        // Create uploads folder if it doesn't exist
         if (!Files.exists(uploadDir)) {
             Files.createDirectories(uploadDir);
         }
     }
 
+    // Saves a file into uploadDir
     public String saveFile(MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
+        String folder = getFolderByType(file);
+        Path uploadPath = Paths.get("uploads").resolve(folder);
 
-        // name the file if it is unnamed
-        if (originalFilename == null || originalFilename.isBlank()) {
-            originalFilename = "unnamed-file-" + System.currentTimeMillis();
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath); // create folder if it doesn't exist
         }
 
-        Path filePath = uploadDir.resolve(originalFilename).normalize();
+        String filename = file.getOriginalFilename();
+
+        // Name the file if it is unnamed
+        if (filename == null || filename.isBlank()) {
+            filename = "unnamed-file-" + System.currentTimeMillis();
+        }
+
+        Path filePath = uploadPath.resolve(filename);
+
+        // Rename file if needed to prevent overwriting
+//        int count = 1;
+//        while (Files.exists(filePath)) {
+//            String name = FilenameUtils.getBaseName(filename);
+//        }
+
         file.transferTo(filePath.toFile());
 
         return filePath.toString();
     }
 
+    // Loads a file from uploadDir
     public Resource loadFile(String filename) throws IOException {
         Path filePath = uploadDir.resolve(filename).normalize();
         if (!Files.exists(filePath)) {
@@ -51,9 +67,18 @@ public class FileStorageService {
     // List all stored files
     public List<String> listFiles() throws IOException {
         try (Stream<Path> paths = Files.list(uploadDir)) {
-            return paths.map(p -> p.getFileName().toString())
-                    .collect(Collectors.toList());
+            return paths.map(p -> p.getFileName().toString()).collect(Collectors.toList());
         }
+    }
+
+    private String getFolderByType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null) return "others";
+        if (contentType.startsWith("image/")) return "images";
+        if (contentType.equals("application/pdf") || contentType.equals("application/msword"))
+            return "docs";
+        if (contentType.startsWith("video/")) return "videos";
+        return "others";
     }
 }
 

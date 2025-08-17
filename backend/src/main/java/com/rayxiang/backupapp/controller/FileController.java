@@ -23,7 +23,7 @@ public class FileController {
         try {
             String path = storageService.saveFile(file);
             return ResponseEntity.ok("File uploaded to: " + path);
-        } catch (Exception e) {
+        } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
         }
     }
@@ -32,7 +32,6 @@ public class FileController {
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
         try {
             Resource resource = storageService.loadFile(filename);
-
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + resource.getFilename() + "\"")
